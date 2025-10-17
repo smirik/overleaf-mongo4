@@ -26,7 +26,7 @@ RUN set -eux; \
   tlmgr install \
     latexmk \
     biber biblatex biblatex-apa csquotes logreq xpatch xstring \
-    graphicx xcolor pgf tikz-cd pgfplots standalone svg pdfpages \
+    graphicx xcolor pgf tikz-cd pgfplots standalone svg pdfpages caption float endfloat placeins pdflscape setspace \
     booktabs threeparttable tabularx longtable array dcolumn multirow makecell \
     hyperref cleveref url xurl doi orcidlink \
     amsmath amsfonts amssymb mathtools \

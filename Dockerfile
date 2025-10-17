@@ -1,51 +1,65 @@
 # Dockerfile
 FROM sharelatex/sharelatex:4.1.6
 
-# ---- knobs ----
-ARG TL_MIRROR=http://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2023/tlnet-final
-ENV TEXLIVE_BIN=/usr/local/texlive/2023/bin/x86_64-linux
-ENV PATH="${TEXLIVE_BIN}:${PATH}"
+# (1) Environment: make TeX binaries visible everywhere
+ENV TL_YEAR=2023 \
+    TL_ROOT=/usr/local/texlive \
+    TL_DIR=/usr/local/texlive/2023 \
+    TL_BIN=/usr/local/texlive/2023/bin/x86_64-linux
 
-# Make RUN noisy & fail-fast
-SHELL ["/bin/bash", "-euxo", "pipefail", "-c"]
+# Put our own /usr/local/bin first so a shim can shadow fmtutil-sys
+ENV PATH=/usr/local/bin:${TL_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
-# 1) Pin tlmgr to TL2023 historic mirror and self-update
-RUN echo ">> pin tlmgr to ${TL_MIRROR}" \
- && tlmgr option repository "${TL_MIRROR}" \
- && tlmgr update --self
-
-# 2) Core collections (split into layers so you see progress + benefit from cache)
-RUN echo ">> install core TeX collections" \
- && tlmgr install \
-    collection-latex collection-latexrecommended collection-latexextra \
-    collection-fontsrecommended collection-bibtexextra \
-    collection-publishers collection-science collection-mathscience \
-    collection-xetex collection-luatex
-
-# 3) Your common pkgs (APA, astro/psych, graphics, etc.)
-RUN echo ">> install common pkgs" \
- && tlmgr install \
-    csquotes biblatex biblatex-apa biber apa7 scalerel \
-    hyperref cleveref xurl url doi orcidlink \
-    siunitx booktabs threeparttable tabularx longtable array dcolumn multirow makecell adjustbox \
+# (2) Install TeX packages from the *frozen* TL2023 repo, but skip auto fmt rebuilds
+#     by shadowing fmtutil-sys with a no-op during tlmgr installs
+RUN set -eux; \
+  # --- shim to bypass fmtutil during tlmgr postactions ---
+  printf '#!/bin/sh\nprintf "fmtutil-sys temporarily disabled during build\\n" >&2\nexit 0\n' > /usr/local/bin/fmtutil-sys; \
+  chmod +x /usr/local/bin/fmtutil-sys; \
+  \
+  tlmgr option repository http://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2023/tlnet-final; \
+  tlmgr update --self; \
+  \
+  # Core packages you need (targeted set; no giant collections to keep it fast)
+  tlmgr install \
+    latexmk \
+    # bibliography stack
+    biber biblatex biblatex-apa csquotes logreq xpatch xstring \
+    # graphics + tables + refs
+    graphicx xcolor pgf tikz-cd pgfplots standalone svg pdfpages \
+    booktabs threeparttable tabularx longtable array dcolumn multirow makecell \
+    hyperref cleveref url xurl doi orcidlink \
+    # math
     amsmath amsfonts amssymb mathtools \
-    graphicx xcolor pgf pgfplots tikz-cd standalone svg pdfpages \
-    etoolbox xstring xkeyval kvoptions subfiles comment \
-    mhchem physics unicode-math fontspec polyglossia \
-    aastex mnras revtex4-2 aas_macros
+    # misc utilities
+    etoolbox xkeyval kvoptions subfiles comment adjustbox \
+    # units/chem
+    siunitx mhchem physics \
+    # engines / unicode
+    fontspec unicode-math polyglossia \
+    # journal classes you mentioned
+    apa7 aastex mnras revtex4-2 aas_macros \
+    # scalerel + tikz helpers
+    scalerel tikzsymbols; \
+  \
+  # --- remove shim and build only the formats we actually use ---
+  rm -f /usr/local/bin/fmtutil-sys; \
+  \
+  mktexlsr; \
+  updmap-sys; \
+  fmtutil-sys --byfmt latex; \
+  fmtutil-sys --byfmt pdflatex; \
+  fmtutil-sys --byfmt xelatex; \
+  fmtutil-sys --byfmt lualatex; \
+  \
+  # sanity: show engines & biber on PATH
+  which pdflatex xelatex lualatex biber latexmk; \
+  pdflatex --version | head -n1; \
+  biber --version | head -n1
 
-# 4) Index + only the formats we actually need (avoid xelatex-dev noise)
-RUN echo ">> mktexlsr + minimal fmtutil" \
- && mktexlsr \
- && fmtutil-sys --byfmt pdflatex \
- && fmtutil-sys --byfmt xetex \
- && fmtutil-sys --byfmt xelatex \
- && fmtutil-sys --byfmt lualatex
+# (3) Optional: unify biber path for Overleaf’s scripts (symlink)
+RUN set -eux; \
+  test -x "${TL_BIN}/biber" && ln -sf "${TL_BIN}/biber" /usr/bin/biber
 
-# 5) Stable tool paths for Overleaf toolchain
-RUN ln -sf ${TEXLIVE_BIN}/biber /usr/local/bin/biber \
- && ln -sf ${TEXLIVE_BIN}/latexmk /usr/local/bin/latexmk \
- && printf '%s\n' \
-      "\$bibtex_use = 2;" \
-      "\$pdflatex = 'pdflatex -interaction=nonstopmode -synctex=1 %O %S';" \
-      > /etc/latexmkrc
+# (4) Keep image small(er)
+RUN tlmgr path add

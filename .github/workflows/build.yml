@@ -3,7 +3,7 @@ name: Build and Push Overleaf+TL2023
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, wip ]
   workflow_dispatch:
 
 jobs:

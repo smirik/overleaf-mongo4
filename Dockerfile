@@ -1,5 +1,5 @@
 # Dockerfile
-FROM overleaf/sharelatex:latest
+FROM sharelatex/sharelatex:4.1.6
 
 # (1) Environment: make TeX binaries visible everywhere
 ENV TEXLIVE_BIN=/usr/local/texlive/2023/bin/x86_64-linux

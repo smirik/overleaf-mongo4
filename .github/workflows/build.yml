@@ -1,9 +1,8 @@
-# .github/workflows/build.yml
-name: Build and Push Overleaf+TL2023
+name: Build and Push Overleaf (AVX-safe TL2023)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, wip ]
   workflow_dispatch:
 
 jobs:
@@ -11,32 +10,47 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write  # allows pushing to GHCR
+      packages: write
+
+    env:
+      # Show live build logs instead of the “quiet” default
+      BUILDKIT_PROGRESS: plain
+      # Prevent log truncation on long steps
+      BUILDKIT_STEP_LOG_MAX_SIZE: "10485760"
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Log in to GHCR
+      - name: Setup Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          buildkitd-flags: --debug
+
+      - name: Login to GHCR
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata (tags, labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=raw,value=latest
-            type=ref,event=branch
-            type=sha
+      # Optional (recommended if Docker Hub pulls rate-limit you)
+      # - name: Login to Docker Hub
+      #   uses: docker/login-action@v3
+      #   with:
+      #     username: ${{ secrets.DOCKERHUB_USERNAME }}
+      #     password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Build and push
+      - name: Build & Push (with cache)
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+          build-args: |
+            TL_MIRROR=http://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2023/tlnet-final

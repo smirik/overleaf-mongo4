@@ -1,0 +1,117 @@
+services:
+    overleaf:
+     restart: on-failure:5
+     image: ghcr.io/smirik/overleaf-mongo4:latest   # custom build with packages installed
+     healthcheck:
+      test: curl -f http://localhost:80/ || exit 1
+     container_name: Overleaf
+     depends_on:
+      mongo-init:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy     
+     ports:
+         - 7643:80
+     stop_grace_period: 60s
+     volumes:
+         - /volume1/docker/overleaf:/var/lib/overleaf:rw # maybe, something is wrong here but it's working
+         - /volume1/docker/overleaf:/var/www/overleaf:rw
+         - /volume1/docker/overleaf:/var/www/sharelatex:rw
+     environment:
+      OVERLEAF_APP_NAME: Your Overleaf Community Edition Name
+      OVERLEAF_MONGO_URL: mongodb://mongo/sharelatex?replicaSet=rs0
+      OVERLEAF_REDIS_HOST: redis
+      REDIS_HOST: redis
+      ENABLED_LINKED_FILE_TYPES: project_file,project_output_file
+      ENABLE_CONVERSIONS: true
+      EMAIL_CONFIRMATION_DISABLED: false
+      OVERLEAF_ADMIN_EMAIL: admin@example.org
+      TEXMFVAR: /var/lib/sharelatex/tmp/texmf-var
+      OVERLEAF_SITE_URL: https://your-website-url
+      OVERLEAF_NAV_TITLE: nav-title
+      OVERLEAF_EMAIL_SMTP_HOST: smtp.example.org
+      OVERLEAF_EMAIL_SMTP_PORT: 587
+      OVERLEAF_EMAIL_SMTP_USER: noreply@example.org
+      OVERLEAF_EMAIL_SMTP_PASS: pass-for-smtp
+      OVERLEAF_EMAIL_SMTP_TLS_REJECT_UNAUTH: true
+      OVERLEAF_EMAIL_SMTP_IGNORE_TLS: false
+      OVERLEAF_EMAIL_FROM_ADDRESS: noreply@example.org
+      OVERLEAF_EMAIL_SMTP_LOGGER: true
+
+      SHARELATEX_APP_NAME: Your website title
+      SHARELATEX_MONGO_URL: mongodb://mongo/sharelatex?replicaSet=rs0
+      SHARELATEX_REDIS_HOST: redis
+      SHARELATEX_ADMIN_EMAIL: admin@example.org
+      SHARELATEX_SITE_URL: https://your-website-url
+      SHARELATEX_NAV_TITLE: nav-title
+
+      # SMTP (converted to SHARELATEX_* names for the old overleaf version)
+      SHARELATEX_EMAIL_SMTP_HOST: smtp.mailgun.org
+      SHARELATEX_EMAIL_SMTP_PORT: 587
+      SHARELATEX_EMAIL_SMTP_USER: noreply@example.org
+      SHARELATEX_EMAIL_SMTP_PASS: pass-for-smtp
+      SHARELATEX_EMAIL_SMTP_TLS_REJECT_UNAUTH: true
+      SHARELATEX_EMAIL_SMTP_IGNORE_TLS: false
+      SHARELATEX_EMAIL_FROM_ADDRESS: noreply@example.org
+      SHARELATEX_EMAIL_SMTP_LOGGER: true
+
+    mongo:
+      image: mongo:4.4
+      container_name: Overleaf-DB
+      command: --replSet rs0 --bind_ip_all
+      volumes:
+        - /volume1/docker/overleaf/db:/data/db:rw
+      # keep DB closed to LAN:
+      # ports:
+      #   - "27017:27017"
+      healthcheck:
+        # simple/harmless healthcheck; real readiness is done in mongo-init
+        test: ["CMD", "true"]
+        interval: 10s
+        timeout: 5s
+        retries: 1
+        start_period: 5s
+      restart: always   
+
+    mongo-init:
+      image: mongo:4.4
+      container_name: mongo-init
+      restart: "no"
+      depends_on:
+        mongo:
+          condition: service_started
+      command: >
+        bash -lc '
+          echo "Waiting for Mongo on mongo:27017...";
+          for i in {1..60}; do
+            mongo --host mongo:27017 --quiet --eval "db.adminCommand({ ping: 1 })" && break || sleep 2;
+          done;
+          echo "Attempting rs.initiate...";
+          mongo --host mongo:27017 --quiet --eval "
+            try {
+              rs.initiate({ _id: \"rs0\", members: [{ _id: 0, host: \"mongo:27017\" }] });
+              printjson(rs.status().ok);
+            } catch(e) {
+              if (e.message.match(/already initialized|already initiated|already initialized/)) {
+                print(\"Replica set already initialized, continuing\");
+              } else {
+                throw e;
+              }
+            }
+          ";
+        '
+      
+    redis:
+      image: redis
+      container_name: Overleaf-REDIS
+      security_opt:
+       - no-new-privileges:true
+      healthcheck:
+       test: ["CMD-SHELL", "redis-cli ping || exit 1"]
+      expose:
+       - 6379
+      volumes:
+       - /volume1/docker/overleaf/redis:/data:rw
+      environment:
+       TZ: Europe/Madrid
+      restart: on-failure:5

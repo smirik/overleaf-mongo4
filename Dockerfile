@@ -35,6 +35,18 @@ RUN set -eux; \
     fontspec unicode-math polyglossia \
     apa7 aastex mnras revtex4-2 aas_macros \
     scalerel tikzsymbols \
+    collection-lang-cyrillic \
+    babel-russian \
+    cm-super \
+    collection-latexrecommended \
+    collection-latexextra \
+    collection-fontsrecommended \
+    collection-fontsextra \
+    collection-mathscience \
+    collection-bibtexextra \
+    collection-pictures \
+    collection-langcyrillic \
+    cm-super \
   || true; \
   \
   # Clean up shims and refresh filename DB

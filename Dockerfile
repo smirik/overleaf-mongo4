@@ -47,6 +47,8 @@ RUN set -eux; \
     collection-pictures \
     collection-langcyrillic \
     cm-super \
+    txfonts \
+    elsarticle \
   || true; \
   \
   # Clean up shims and refresh filename DB

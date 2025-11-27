@@ -8,10 +8,14 @@ ENV TL_YEAR=2023 \
     TL_BIN=/usr/local/texlive/2023/bin/x86_64-linux
 
 # Put TeX bin early in PATH, but keep default system paths too
-ENV PATH=${TL_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV PATH=/usr/local/bin:${TL_BIN}:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # (2) Install TeX Live packages
 RUN set -eux; \
+  \
+  # Stub ONLY fmtutil-sys to avoid long format rebuilds in CI
+  printf '#!/bin/sh\nprintf "fmtutil-sys skipped during image build\n" >&2\nexit 0\n' > /usr/local/bin/fmtutil-sys; \
+  chmod +x /usr/local/bin/fmtutil-sys; \
   \
   # Optionally pin to frozen TL2023 repo (you can comment this out if it causes issues)
   tlmgr option repository http://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2023/tlnet-final || true; \

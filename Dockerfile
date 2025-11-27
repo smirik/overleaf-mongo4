@@ -17,36 +17,37 @@ RUN set -eux; \
   printf '#!/bin/sh\nprintf "fmtutil-sys skipped during image build\n" >&2\nexit 0\n' > /usr/local/bin/fmtutil-sys; \
   chmod +x /usr/local/bin/fmtutil-sys; \
   \
-  # Don't pin repo — base image already configured
+  # Pin to frozen TL2023 repo (like your original Dockerfile)
+  tlmgr option repository http://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2023/tlnet-final || true; \
   tlmgr update --self || true; \
   \
-  echo "=== Installing TeX packages (non-fatal) ==="; \
-  ( \
-    tlmgr install \
-      latexmk \
-      biber biblatex biblatex-apa csquotes logreq xpatch xstring \
-      graphicx xcolor pgf tikz-cd pgfplots standalone svg pdfpages caption float endfloat placeins pdflscape setspace \
-      booktabs threeparttable tabularx longtable array dcolumn multirow makecell \
-      hyperref cleveref url xurl doi orcidlink \
-      amsmath amsfonts amssymb mathtools \
-      etoolbox xkeyval kvoptions subfiles comment adjustbox \
-      siunitx mhchem physics \
-      fontspec unicode-math polyglossia \
-      apa7 aastex mnras revtex4-2 aas_macros \
-      scalerel tikzsymbols \
-      collection-langcyrillic \
-      babel-russian \
-      cm-super \
-      collection-latexrecommended \
-      collection-latexextra \
-      collection-fontsrecommended \
-      collection-fontsextra \
-      collection-mathscience \
-      collection-bibtexextra \
-      collection-pictures \
-      txfonts \
-      elsarticle \
-  ) || echo "WARNING: one or more tlmgr packages failed to install"; \
+  echo "=== Installing TeX packages ==="; \
+  tlmgr install \
+    latexmk \
+    biber biblatex biblatex-apa csquotes logreq xpatch xstring \
+    graphicx xcolor pgf tikz-cd pgfplots standalone svg pdfpages caption float endfloat placeins pdflscape setspace \
+    booktabs threeparttable tabularx longtable array dcolumn multirow makecell \
+    hyperref cleveref url xurl doi orcidlink \
+    amsmath amsfonts amssymb mathtools \
+    etoolbox xkeyval kvoptions subfiles comment adjustbox \
+    siunitx mhchem physics \
+    fontspec unicode-math polyglossia \
+    apa7 aastex mnras revtex4-2 aas_macros \
+    scalerel tikzsymbols \
+    sttools \
+    collection-langcyrillic \
+    babel-russian \
+    cm-super \
+    collection-latexrecommended \
+    collection-latexextra \
+    collection-fontsrecommended \
+    collection-fontsextra \
+    collection-mathscience \
+    collection-bibtexextra \
+    collection-pictures \
+    txfonts \
+    elsarticle \
+  ; \
   \
   # Refresh filename DB and rebuild font maps
   mktexlsr; \
@@ -61,6 +62,7 @@ RUN set -eux; \
   which biber || true; \
   kpsewhich rtxr.tfm || echo "WARNING: rtxr.tfm not found"; \
   kpsewhich txfonts.map || echo "WARNING: txfonts.map not found"; \
+  kpsewhich cuted.sty || echo "WARNING: cuted.sty not found"; \
   pdflatex --version | head -n 1 || true; \
   biber --version | head -n 1 || true
 

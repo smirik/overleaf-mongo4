@@ -36,7 +36,7 @@ RUN set -eux; \
     fontspec unicode-math polyglossia \
     apa7 aastex mnras revtex4-2 aas_macros \
     scalerel tikzsymbols \
-    collection-lang-cyrillic \
+    collection-langcyrillic \
     babel-russian \
     cm-super \
     collection-latexrecommended \

@@ -21,33 +21,34 @@ RUN set -eux; \
   tlmgr option repository http://ftp.math.utah.edu/pub/tex/historic/systems/texlive/2023/tlnet-final || true; \
   tlmgr update --self || true; \
   \
-  echo "=== Installing TeX packages ==="; \
-  tlmgr install \
-    latexmk \
-    biber biblatex biblatex-apa csquotes logreq xpatch xstring \
-    graphicx xcolor pgf tikz-cd pgfplots standalone svg pdfpages caption float endfloat placeins pdflscape setspace \
-    booktabs threeparttable tabularx longtable array dcolumn multirow makecell \
-    hyperref cleveref url xurl doi orcidlink \
-    amsmath amsfonts amssymb mathtools \
-    etoolbox xkeyval kvoptions subfiles comment adjustbox \
-    siunitx mhchem physics \
-    fontspec unicode-math polyglossia \
-    apa7 aastex mnras revtex4-2 aas_macros \
-    scalerel tikzsymbols \
-    sttools \
-    collection-langcyrillic \
-    babel-russian \
-    cm-super \
-    collection-latexrecommended \
-    collection-latexextra \
-    collection-fontsrecommended \
-    collection-fontsextra \
-    collection-mathscience \
-    collection-bibtexextra \
-    collection-pictures \
-    txfonts \
-    elsarticle \
-  ; \
+  echo "=== Installing TeX packages (non-fatal) ==="; \
+  ( \
+    tlmgr install \
+      latexmk \
+      biber biblatex biblatex-apa csquotes logreq xpatch xstring \
+      graphicx xcolor pgf tikz-cd pgfplots standalone svg pdfpages caption float endfloat placeins pdflscape setspace \
+      booktabs threeparttable tabularx longtable array dcolumn multirow makecell \
+      hyperref cleveref url xurl doi orcidlink \
+      amsmath amsfonts amssymb mathtools \
+      etoolbox xkeyval kvoptions subfiles comment adjustbox \
+      siunitx mhchem physics \
+      fontspec unicode-math polyglossia \
+      apa7 aastex mnras revtex4-2 aas_macros \
+      scalerel tikzsymbols \
+      sttools \
+      collection-langcyrillic \
+      babel-russian \
+      cm-super \
+      collection-latexrecommended \
+      collection-latexextra \
+      collection-fontsrecommended \
+      collection-fontsextra \
+      collection-mathscience \
+      collection-bibtexextra \
+      collection-pictures \
+      txfonts \
+      elsarticle \
+  ) || echo "WARNING: one or more tlmgr packages failed to install"; \
   \
   # Refresh filename DB and rebuild font maps
   mktexlsr; \
